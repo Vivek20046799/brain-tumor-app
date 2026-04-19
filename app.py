@@ -162,7 +162,7 @@ transform = transforms.Compose([
 col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
-    st.subheader("📤 Scan Input")
+    st.subheader(" Scan Input")
     uploaded_file = st.file_uploader("Upload MRI Image (JPG/PNG)", type=["jpg", "png", "jpeg"])
     
     if uploaded_file:
@@ -170,7 +170,7 @@ with col1:
         st.image(image, caption="Subject MRI Scan", use_container_width=True)
 
 with col2:
-    st.subheader("⚡ Inference Results")
+    st.subheader(" Inference Results")
     if uploaded_file:
         img = transform(image).unsqueeze(0)
         
@@ -194,9 +194,9 @@ with col2:
 
         # Clinical Guidance
         if result == "No Tumor":
-            st.success("✅ Analysis shows normal brain morphology.")
+            st.success(" Analysis shows normal brain morphology.")
         else:
-            st.warning(f"🚨 Detected features characteristic of **{result}**. Prompt neurosurgical review is advised.")
+            st.warning(f" Detected features characteristic of **{result}**. Prompt neurosurgical review is advised.")
 
         # Analytics Chart
         st.write("---")
