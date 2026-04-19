@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import pandas as pd
 
 # ================= MODEL ARCHITECTURE =================
-# Note: Logic remains untouched as per your instructions.
+
 beta = 0.5
 spike_grad = surrogate.fast_sigmoid()
 
@@ -34,7 +34,7 @@ class ResBlock(nn.Module):
             nn.Conv2d(in_ch, out_ch, 3, padding=1),
             nn.BatchNorm2d(out_ch),
             nn.GELU(),
-            # Removed redundant torch.relu here to maintain architecture integrity
+            
             nn.Conv2d(out_ch, out_ch, 3, padding=1),
             nn.BatchNorm2d(out_ch)
         )
