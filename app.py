@@ -7,7 +7,6 @@ from PIL import Image
 import torchvision.transforms as transforms
 import pandas as pd
 
-# ================= MODEL =================
 beta = 0.5
 spike_grad = surrogate.fast_sigmoid()
 
@@ -50,7 +49,7 @@ class BigSNN(nn.Module):
         self.layer1 = ResBlock(3, 64)
         self.layer2 = ResBlock(64, 128)
         self.layer3 = ResBlock(128, 256)
-        self.layer4 = ResBlock(256, 256)
+        self.layer4 = ResBlock(256, 512)
 
         self.pool = nn.MaxPool2d(2)
 
@@ -59,9 +58,9 @@ class BigSNN(nn.Module):
         self.lif1 = snn.Leaky(beta=beta, spike_grad=spike_grad)
         self.lif2 = snn.Leaky(beta=beta, spike_grad=spike_grad)
 
-        self.fc1 = nn.Linear(256, 512)
+        self.fc1 = nn.Linear(512*8*8, 1024)
         self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(512, 4)
+        self.fc2 = nn.Linear(1024, 4)
 
     def forward(self, x, T=4):
         mem_mid1 = self.lif_mid1.init_leaky()
@@ -86,19 +85,16 @@ class BigSNN(nn.Module):
 
             spk1, mem1 = self.lif1(x4, mem1)
 
-            gap = torch.mean(spk1, dim=[2,3])   
+            flat = spk1.view(spk1.size(0), -1)
+            flat = self.dropout(flat)
 
-            gap = self.dropout(gap)
-
-            fc = self.fc1(gap)
-            
+            fc = self.fc1(flat)
             spk2, mem2 = self.lif2(fc, mem2)
 
             out = self.fc2(spk2)
             outputs.append(out)
 
         return torch.stack(outputs).mean(0)
-
 # ================= STREAMLIT CONFIG & UI =================
 st.set_page_config(page_title="BigSNN | Vivek Katuri", layout="wide", page_icon="🧠")
 
