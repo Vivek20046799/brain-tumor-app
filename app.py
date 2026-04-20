@@ -7,8 +7,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 import pandas as pd
 
-# ================= MODEL ARCHITECTURE =================
-
+# ================= MODEL =================
 beta = 0.5
 spike_grad = surrogate.fast_sigmoid()
 
@@ -34,7 +33,6 @@ class ResBlock(nn.Module):
             nn.Conv2d(in_ch, out_ch, 3, padding=1),
             nn.BatchNorm2d(out_ch),
             nn.GELU(),
-            
             nn.Conv2d(out_ch, out_ch, 3, padding=1),
             nn.BatchNorm2d(out_ch)
         )
@@ -52,7 +50,8 @@ class BigSNN(nn.Module):
         self.layer1 = ResBlock(3, 64)
         self.layer2 = ResBlock(64, 128)
         self.layer3 = ResBlock(128, 256)
-        self.layer4 = ResBlock(256, 512)
+        self.layer4 = ResBlock(256, 256)
+
         self.pool = nn.MaxPool2d(2)
 
         self.lif_mid1 = snn.Leaky(beta=beta, spike_grad=spike_grad)
@@ -60,11 +59,11 @@ class BigSNN(nn.Module):
         self.lif1 = snn.Leaky(beta=beta, spike_grad=spike_grad)
         self.lif2 = snn.Leaky(beta=beta, spike_grad=spike_grad)
 
-        self.fc1 = nn.Linear(512*8*8, 1024)
+        self.fc1 = nn.Linear(256, 512)
         self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(1024, 4)
+        self.fc2 = nn.Linear(512, 4)
 
-    def forward(self, x, T=6):
+    def forward(self, x, T=4):
         mem_mid1 = self.lif_mid1.init_leaky()
         mem_mid2 = self.lif_mid2.init_leaky()
         mem1 = self.lif1.init_leaky()
@@ -75,17 +74,26 @@ class BigSNN(nn.Module):
 
         for step in range(T):
             x_t = x_seq[step]
+
             x1 = self.pool(self.layer1(x_t))
             spk_mid1, mem_mid1 = self.lif_mid1(x1, mem_mid1)
+
             x2 = self.pool(self.layer2(spk_mid1))
             spk_mid2, mem_mid2 = self.lif_mid2(x2, mem_mid2)
+
             x3 = self.pool(self.layer3(spk_mid2))
             x4 = self.pool(self.layer4(x3))
+
             spk1, mem1 = self.lif1(x4, mem1)
-            flat = spk1.view(spk1.size(0), -1)
-            flat = self.dropout(flat)
-            fc = self.fc1(flat)
+
+            gap = torch.mean(spk1, dim=[2,3])   
+
+            gap = self.dropout(gap)
+
+            fc = self.fc1(gap)
+            
             spk2, mem2 = self.lif2(fc, mem2)
+
             out = self.fc2(spk2)
             outputs.append(out)
 
